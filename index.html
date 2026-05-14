@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NERC CIP × RiskQ CRQ — OT Cyber Risk Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:       #0a0e14;
+  --bg2:      #111720;
+  --bg3:      #181f2a;
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.13);
+  --text:     #e8edf4;
+  --muted:    #6b7a91;
+  --accent:   #00d4ff;
+  --accent2:  #00ff9d;
+  --warn:     #ffb84d;
+  --danger:   #ff4d6d;
+  --info:     #4d9eff;
+  --red-bg:   rgba(255,77,109,0.12);
+  --amb-bg:   rgba(255,184,77,0.10);
+  --grn-bg:   rgba(0,255,157,0.08);
+  --blu-bg:   rgba(0,212,255,0.08);
+  --font:     'IBM Plex Sans', sans-serif;
+  --mono:     'IBM Plex Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border2);
+  padding: 0 2rem;
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 2rem;
+}
+.header-brand { padding: 1rem 0; display: flex; flex-direction: column; }
+.header-brand .title { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; }
+.header-brand .subtitle { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 1px; }
+.header-tags { display: flex; gap: 8px; margin-left: auto; }
+.htag { font-family: var(--mono); font-size: 10px; border: 1px solid var(--border2); padding: 3px 10px; border-radius: 3px; color: var(--muted); }
+.htag.live { border-color: var(--accent2); color: var(--accent2); }
+.nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; gap: 0; position: sticky; top: 57px; z-index: 99; }
+.nav-btn { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--muted); background: none; border: none; border-bottom: 2px solid transparent; padding: 12px 18px; cursor: pointer; letter-spacing: .05em; text-transform: uppercase; transition: color .2s, border-color .2s; }
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+.panel { display: none; }
+.panel.active { display: block; }
+.formula-bar { background: var(--bg3); border: 1px solid var(--border2); border-left: 3px solid var(--accent); border-radius: 4px; padding: .75rem 1.25rem; font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 2; margin-bottom: 1.5rem; }
+.formula-bar span { color: var(--accent2); }
+.kpis { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 1.5rem; }
+.kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem; position: relative; overflow: hidden; transition: border-color .2s; }
+.kpi:hover { border-color: var(--border2); }
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.kpi.danger::before { background: var(--danger); }
+.kpi.warn::before   { background: var(--warn); }
+.kpi.ok::before     { background: var(--accent2); }
+.kpi.info::before   { background: var(--info); }
+.kpi .lbl { font-size: 10px; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
+.kpi .val { font-size: 26px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+.kpi .sub { font-size: 10px; color: var(--muted); margin-top: .3rem; }
+.kpi.danger .val { color: var(--danger); }
+.kpi.warn   .val { color: var(--warn); }
+.kpi.ok     .val { color: var(--accent2); }
+.kpi.info   .val { color: var(--info); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1.5rem; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 1.5rem; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+.card-title { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+.card-title::before { content: '//'; color: var(--accent); }
+.cw { position: relative; width: 100%; }
+.roi-hero { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 1.5rem; }
+.hero { border-radius: 8px; padding: 1.5rem 1.25rem; text-align: center; border: 1px solid; }
+.hero.red   { background: var(--red-bg); border-color: rgba(255,77,109,.25); }
+.hero.green { background: var(--grn-bg); border-color: rgba(0,255,157,.25); }
+.hero.blue  { background: var(--blu-bg); border-color: rgba(0,212,255,.25); }
+.hero .hlbl { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .5rem; }
+.hero.red   .hlbl { color: var(--danger); }
+.hero.green .hlbl { color: var(--accent2); }
+.hero.blue  .hlbl { color: var(--accent); }
+.hero .hval { font-family: var(--mono); font-size: 36px; font-weight: 600; line-height: 1; }
+.hero.red   .hval { color: var(--danger); }
+.hero.green .hval { color: var(--accent2); }
+.hero.blue  .hval { color: var(--accent); }
+.hero .hsub { font-size: 11px; color: var(--muted); margin-top: .4rem; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th { text-align: left; color: var(--muted); font-weight: 500; font-family: var(--mono); font-size: 10px; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--border2); letter-spacing: .05em; }
+.tbl td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: rgba(255,255,255,.02); }
+.mono { font-family: var(--mono); }
+.danger-t { color: var(--danger); font-weight: 600; }
+.warn-t   { color: var(--warn);   font-weight: 600; }
+.ok-t     { color: var(--accent2);font-weight: 600; }
+.info-t   { color: var(--info);   font-weight: 600; }
+.badge { display: inline-block; font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+.b-ni { background: rgba(255,77,109,.15); color: var(--danger); border: 1px solid rgba(255,77,109,.3); }
+.b-p  { background: rgba(255,184,77,.12); color: var(--warn);   border: 1px solid rgba(255,184,77,.3); }
+.b-i  { background: rgba(0,255,157,.10);  color: var(--accent2);border: 1px solid rgba(0,255,157,.25); }
+.b-h  { background: rgba(255,77,109,.15); color: var(--danger); border: 1px solid rgba(255,77,109,.3); }
+.b-mh { background: rgba(255,184,77,.12); color: var(--warn);   border: 1px solid rgba(255,184,77,.3); }
+.b-ml { background: rgba(255,220,100,.10);color: #ffd464;       border: 1px solid rgba(255,220,100,.25); }
+.b-l  { background: rgba(0,255,157,.10);  color: var(--accent2);border: 1px solid rgba(0,255,157,.25); }
+.sens-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.sens-row:last-child { border-bottom: none; }
+.sens-prob { font-family: var(--mono); font-size: 12px; font-weight: 600; min-width: 44px; color: var(--text); }
+.sens-wrap { flex: 1; background: rgba(255,255,255,.05); border-radius: 3px; height: 10px; overflow: hidden; }
+.sens-fill { height: 100%; border-radius: 3px; background: var(--info); transition: width .6s ease; }
+.sens-val  { font-family: var(--mono); font-size: 11px; color: var(--muted); min-width: 90px; text-align: right; }
+.sens-roi  { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent2); min-width: 50px; text-align: right; }
+.base-pill { font-size: 9px; background: var(--blu-bg); color: var(--accent); border: 1px solid rgba(0,212,255,.3); padding: 1px 6px; border-radius: 3px; font-family: var(--mono); margin-left: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.back-top { position: fixed; bottom: 2rem; right: 2rem; background: var(--bg3); border: 1px solid var(--border2); color: var(--muted); font-family: var(--mono); font-size: 11px; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: color .2s; text-decoration: none; }
+.back-top:hover { color: var(--accent); border-color: var(--accent); }
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2,1fr); }
+  .grid2, .grid3, .roi-hero { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="title">NERC CIP × RiskQ CRQ</div>
+    <div class="subtitle">OT Cyber Risk — Digital Asset Model + CRQ Dashboard</div>
+  </div>
+  <div class="header-tags">
+    <span class="htag">Asset Scope: LTE + SEL-651R</span>
+    <span class="htag">30 Risk Vectors</span>
+    <span class="htag">CIP-002 → CIP-013</span>
+    <span class="htag live">● RiskQ PML</span>
+  </div>
+</header>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="sw('overview')">Overview</button>
+  <button class="nav-btn" onclick="sw('crq')">CRQ / PML</button>
+  <button class="nav-btn" onclick="sw('roi')">ROI & Payback</button>
+  <button class="nav-btn" onclick="sw('register')">Risk Register</button>
+  <button class="nav-btn" onclick="sw('cip')">CIP Gap Analysis</button>
+  <button class="nav-btn" onclick="sw('sens')">Sensitivity</button>
+</nav>
+
+<main class="main">
+
+<section id="overview" class="panel active">
+  <div class="formula-bar">
+    <span>NERC CIP Risk Score</span> = ROUND( (Asset_Criticality × Threat_Likelihood × Impact_Severity) / 5, 0 ) &nbsp;|&nbsp;
+    <span>Residual</span> = Inherent × Control_Factor &nbsp;|&nbsp; Implemented=0.35 · Partial=0.60 · Not_Impl=0.90
+  </div>
+  <div class="kpis">
+    <div class="kpi danger"><div class="lbl">Total PML Without</div><div class="val">$42.2M</div><div class="sub">Worst-case single event</div></div>
+    <div class="kpi warn"><div class="lbl">Residual PML</div><div class="val">$26.8M</div><div class="sub">After current controls</div></div>
+    <div class="kpi ok"><div class="lbl">Gross PML Reduction</div><div class="val">$15.4M</div><div class="sub">Per-event avoidance</div></div>
+    <div class="kpi info"><div class="lbl">Annual ALE Reduction</div><div class="val">$5.4M</div><div class="sub">Prob-weighted @ 35%</div></div>
+    <div class="kpi ok"><div class="lbl">ROI Multiple</div><div class="val">249x</div><div class="sub">Net benefit / $21.5K cost</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">NERC CIP Inherent Risk Distribution (30 items)</div>
+      <div class="legend">
+        <span class="leg-item"><span class="leg-dot" style="background:#ff4d6d"></span>High/Critical (18)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#ffb84d"></span>Medium-High (8)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#ffd464"></span>Medium-Low (3)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#00ff9d"></span>Low (1)</span>
+      </div>
+      <div class="cw" style="height:220px"><canvas id="c_dist_i"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Residual Risk Distribution (post-control)</div>
+      <div class="legend">
+        <span class="leg-item"><span class="leg-dot" style="background:#ff4d6d"></span>High/Critical (11)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#ffb84d"></span>Medium-High (10)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#ffd464"></span>Medium-Low (7)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#00ff9d"></span>Low (2)</span>
+      </div>
+      <div class="cw" style="height:220px"><canvas id="c_dist_r"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">PML Without vs Residual PML by Asset Group ($M)</div>
+    <div class="legend">
+      <span class="leg-item"><span class="leg-dot" style="background:#ff4d6d"></span>PML Without</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#4d9eff"></span>Residual PML</span>
+    </div>
+    <div class="cw" style="height:260px"><canvas id="c_asset_pml"></canvas></div>
+  </div>
+</section>
+
+<section id="crq" class="panel">
+  <div class="formula-bar">
+    <span>PML Without</span> = weight × Total_PML ($42.2M) &nbsp;|&nbsp;
+    <span>Residual PML</span> = PML × (1 − Mitigation%) &nbsp;|&nbsp;
+    <span>ALE</span> = PML × Attack_Probability (35%) &nbsp;|&nbsp;
+    <span>Mitigation</span>: Implemented 65% · Partial 40% · Not Impl 10%
+  </div>
+  <div class="kpis">
+    <div class="kpi danger"><div class="lbl">Total PML Without</div><div class="val">$42.2M</div><div class="sub">RiskQ base × OT scope</div></div>
+    <div class="kpi warn"><div class="lbl">Residual PML</div><div class="val">$26.8M</div><div class="sub">After NERC CIP controls</div></div>
+    <div class="kpi ok"><div class="lbl">Gross PML Reduction</div><div class="val">$15.4M</div><div class="sub">Direct cost avoidance / event</div></div>
+    <div class="kpi info"><div class="lbl">Inherent ALE</div><div class="val">$14.8M</div><div class="sub">PML × 35% attack prob</div></div>
+    <div class="kpi info"><div class="lbl">Residual ALE</div><div class="val">$9.4M</div><div class="sub">Residual PML × 35%</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">ALE Waterfall — Inherent → Residual</div>
+      <div class="cw" style="height:240px"><canvas id="c_waterfall"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">PML by Control Status</div>
+      <div class="legend">
+        <span class="leg-item"><span class="leg-dot" style="background:#00ff9d"></span>Implemented</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#ffb84d"></span>Partial</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#ff4d6d"></span>Not Implemented</span>
+      </div>
+      <div class="cw" style="height:240px"><canvas id="c_status_pml"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Per-Risk PML Breakdown (top 15 — Without vs Residual)</div>
+    <div class="legend">
+      <span class="leg-item"><span class="leg-dot" style="background:#ff4d6d"></span>PML Without</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#4d9eff"></span>Residual PML</span>
+    </div>
+    <div class="cw" style="height:500px"><canvas id="c_top15"></canvas></div>
+  </div>
+</section>
+
+<section id="roi" class="panel">
+  <div class="roi-hero">
+    <div class="hero red">
+      <div class="hlbl">Total OT Cyber Exposure (PML)</div>
+      <div class="hval">$42.2M</div>
+      <div class="hsub">Worst-case, all 30 risk vectors</div>
+    </div>
+    <div class="hero green">
+      <div class="hlbl">Gross Risk Reduction / Event</div>
+      <div class="hval">$15.4M</div>
+      <div class="hsub">Direct PML avoidance</div>
+    </div>
+    <div class="hero blue">
+      <div class="hlbl">ROI on $21.5K Investment</div>
+      <div class="hval">249x</div>
+      <div class="hsub">Net annual benefit ÷ solution cost</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">ROI Summary — RiskQ Methodology</div>
+      <table class="tbl">
+        <thead><tr><th>Metric</th><th style="text-align:right">Value</th></tr></thead>
+        <tbody>
+          <tr><td>Total PML Without Controls</td><td class="mono danger-t" style="text-align:right">$42,206,260</td></tr>
+          <tr><td>Residual PML With Controls</td><td class="mono warn-t" style="text-align:right">$26,824,569</td></tr>
+          <tr><td>Gross PML Reduction / Event</td><td class="mono ok-t" style="text-align:right">$15,381,691</td></tr>
+          <tr><td>Annual Solution Investment</td><td class="mono" style="text-align:right">$21,500</td></tr>
+          <tr><td>Annual Attack Probability</td><td class="mono info-t" style="text-align:right">35%</td></tr>
+          <tr><td>Inherent ALE (prob-weighted)</td><td class="mono danger-t" style="text-align:right">$14,772,191</td></tr>
+          <tr><td>Residual ALE (prob-weighted)</td><td class="mono warn-t" style="text-align:right">$9,388,599</td></tr>
+          <tr><td>Annual ALE Reduction</td><td class="mono ok-t" style="text-align:right">$5,383,592</td></tr>
+          <tr><td>Net Annual Benefit</td><td class="mono ok-t" style="text-align:right">$5,362,092</td></tr>
+          <tr><td>ROI Multiple</td><td class="mono info-t" style="text-align:right;font-size:16px">249x</td></tr>
+          <tr><td>Risk-Adjusted ROI</td><td class="mono info-t" style="text-align:right">250x</td></tr>
+          <tr><td>Payback Period</td><td class="mono ok-t" style="text-align:right">&lt; 1 month</td></tr>
+          <tr><td>3-Year Cumulative Net Benefit</td><td class="mono ok-t" style="text-align:right">$16,086,276</td></tr>
+          <tr><td>PML as % of Annual Revenue</td><td class="mono" style="text-align:right">8.4%</td></tr>
+          <tr><td>Protection Ratio (PML / $1 spent)</td><td class="mono info-t" style="text-align:right">1,963x</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Value Attribution by Product Layer</div>
+      <div class="cw" style="height:180px"><canvas id="c_layers"></canvas></div>
+      <div style="margin-top:1rem">
+        <table class="tbl">
+          <thead><tr><th>Product</th><th style="text-align:right">Cost/yr</th><th style="text-align:right">Value Mitigated</th><th style="text-align:right">Layer ROI</th></tr></thead>
+          <tbody>
+            <tr><td>Cysurance Warranty</td><td class="mono" style="text-align:right">$1,500</td><td class="mono" style="text-align:right">$7,550,000</td><td class="mono ok-t" style="text-align:right">5,033x</td></tr>
+            <tr><td>RiskQ ValuRisQ</td><td class="mono" style="text-align:right">$8,000</td><td class="mono" style="text-align:right">$350,000</td><td class="mono ok-t" style="text-align:right">43x</td></tr>
+            <tr><td>Elastio Recovery</td><td class="mono" style="text-align:right">$12,000</td><td class="mono" style="text-align:right">$12,480,137</td><td class="mono ok-t" style="text-align:right">1,040x</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">3-Year Cumulative Net Benefit Projection</div>
+    <div class="cw" style="height:220px"><canvas id="c_3yr"></canvas></div>
+  </div>
+</section>
+
+<section id="register" class="panel">
+  <div class="formula-bar">
+    <span>Inherent Score</span> = ROUND( (AC × TL × IS) / 5, 0 ) &nbsp;|&nbsp;
+    <span>Residual Score</span> = ROUND( Inherent × CtrlFactor, 0 ) &nbsp;|&nbsp;
+    <span>PML Without</span> = weight × $42,206,260 &nbsp;|&nbsp;
+    <span>ALE</span> = PML × 35%
+  </div>
+  <div class="card">
+    <div class="card-title">Full Risk Register — 30 Risk Items</div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>ID</th><th>Asset</th><th>Threat Vector</th><th>CIP</th>
+          <th style="text-align:center">AC</th><th style="text-align:center">TL</th><th style="text-align:center">IS</th>
+          <th style="text-align:center">Inh Score</th><th style="text-align:center">Risk Level</th>
+          <th>Control Status</th>
+          <th style="text-align:right">PML Without</th><th style="text-align:right">ALE Reduction</th>
+        </tr></thead>
+        <tbody id="register-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="cip" class="panel">
+  <div class="kpis">
+    <div class="kpi danger"><div class="lbl">Critical Gaps</div><div class="val">2</div><div class="sub">CIP-005 + CIP-007</div></div>
+    <div class="kpi warn"><div class="lbl">High Priority Gaps</div><div class="val">8</div><div class="sub">Requiring Q3 2026 action</div></div>
+    <div class="kpi danger"><div class="lbl">Not Implemented</div><div class="val">4</div><div class="sub">Controls in register</div></div>
+    <div class="kpi warn"><div class="lbl">Partial Controls</div><div class="val">22</div><div class="sub">Deployed, not validated</div></div>
+    <div class="kpi ok"><div class="lbl">Implemented</div><div class="val">4</div><div class="sub">Tested and monitored</div></div>
+  </div>
+  <div class="card" style="margin-bottom:1.5rem">
+    <div class="card-title">Control Gap Status by CIP Standard</div>
+    <div class="cw" style="height:260px"><canvas id="c_cip_gap"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">CIP Gap Register — Priority Actions</div>
+    <table class="tbl">
+      <thead><tr><th>Standard</th><th>Requirement</th><th>Asset(s)</th><th>Status</th><th>Priority</th><th>Target</th><th>Remediation Action</th></tr></thead>
+      <tbody>
+        <tr><td class="mono info-t">CIP-005</td><td>Remote Access ESP</td><td>DA-014</td><td><span class="badge b-ni">Not Impl.</span></td><td><span class="badge b-h">Critical</span></td><td class="mono">Q2 2026</td><td>Deploy cert-based MFA on all VPN/jump host paths</td></tr>
+        <tr><td class="mono info-t">CIP-007</td><td>Auth Strength</td><td>DA-014, DA-010</td><td><span class="badge b-ni">Not Impl.</span></td><td><span class="badge b-h">Critical</span></td><td class="mono">Q2 2026</td><td>Enforce unique accounts; apply password policy + lockout</td></tr>
+        <tr><td class="mono info-t">CIP-002</td><td>Asset Categorization</td><td>DA-009</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-h">High</span></td><td class="mono">Q3 2026</td><td>Complete CIP-002 impact classification documentation</td></tr>
+        <tr><td class="mono info-t">CIP-005</td><td>ESP Segmentation</td><td>DA-011</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-h">High</span></td><td class="mono">Q3 2026</td><td>Execute architecture bypass test; validate firewall ACLs</td></tr>
+        <tr><td class="mono info-t">CIP-006</td><td>Physical Security</td><td>DA-009</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-h">High</span></td><td class="mono">Q3 2026</td><td>Physically disable/cover UART/JTAG/USB ports on all units</td></tr>
+        <tr><td class="mono info-t">CIP-008</td><td>Incident Response</td><td>DA-015</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-h">High</span></td><td class="mono">Q3 2026</td><td>Tabletop exercise: LTE outage + SEL-651R DNP3 attack</td></tr>
+        <tr><td class="mono info-t">CIP-009</td><td>Recovery Plans</td><td>DA-003, DA-005</td><td><span class="badge b-ni">Not Impl.</span></td><td><span class="badge b-h">High</span></td><td class="mono">Q3 2026</td><td>Document + test LTE outage fallback; validate MCPTT redundancy</td></tr>
+        <tr><td class="mono info-t">CIP-010</td><td>Vulnerability Assessment</td><td>DA-009, DA-011</td><td><span class="badge b-ni">Not Impl.</span></td><td><span class="badge b-h">High</span></td><td class="mono">Q3 2026</td><td>Establish annual OT VA; subscribe to ICS-CERT advisories</td></tr>
+        <tr><td class="mono info-t">CIP-013</td><td>Supply Chain Risk</td><td>DA-007, DA-012</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-h">High</span></td><td class="mono">Q3 2026</td><td>Complete SCRM assessments; component authenticity verification</td></tr>
+        <tr><td class="mono info-t">CIP-007</td><td>Patch Management</td><td>DA-009, DA-012</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-p">Medium</span></td><td class="mono">Q4 2026</td><td>Formalize quarterly patch review; deploy firmware inventory monitoring</td></tr>
+        <tr><td class="mono info-t">CIP-007</td><td>Logging & Alerting</td><td>DA-009, DA-010</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-p">Medium</span></td><td class="mono">Q4 2026</td><td>Tune SIEM config-change alerts; integrate SEL-651R into SOC</td></tr>
+        <tr><td class="mono info-t">CIP-010</td><td>Config Change Mgmt</td><td>DA-009, DA-010</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-p">Medium</span></td><td class="mono">Q4 2026</td><td>Deploy automated config diff tooling; alert on unauthorized changes</td></tr>
+        <tr><td class="mono info-t">CIP-011</td><td>Information Protection</td><td>DA-004, DA-007</td><td><span class="badge b-p">Partial</span></td><td><span class="badge b-p">Medium</span></td><td class="mono">Q4 2026</td><td>Verify MEC encryption; apply DLP policies to carrier data interfaces</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="sens" class="panel">
+  <div class="formula-bar">
+    <span>Expected Annual Savings</span> = Gross_PML_Reduction × Attack_Probability &nbsp;|&nbsp;
+    <span>Net Benefit</span> = Annual_Savings − Solution_Cost &nbsp;|&nbsp;
+    <span>ROI</span> = Net_Benefit / Solution_Cost
+  </div>
+  <div class="card" style="margin-bottom:1.5rem">
+    <div class="card-title">ROI Multiple vs Annual Attack Probability</div>
+    <div class="cw" style="height:260px"><canvas id="c_sens_line"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Sensitivity Table</div>
+    <div style="margin-bottom:1rem">
+      <div class="sens-row" style="border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:6px">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted);min-width:100px;text-transform:uppercase">Attack Prob</span>
+        <span style="flex:1;font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase">Annual ALE Reduction</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted);min-width:100px;text-align:right;text-transform:uppercase">Net Benefit</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted);min-width:60px;text-align:right;text-transform:uppercase">ROI</span>
+      </div>
+      <div class="sens-row">
+        <span class="sens-prob">15%</span>
+        <div class="sens-wrap"><div class="sens-fill" style="width:23%"></div></div>
+        <span class="sens-val">$2,307,254 · $2,285,754</span>
+        <span class="sens-roi">106x</span>
+      </div>
+      <div class="sens-row">
+        <span class="sens-prob">25%</span>
+        <div class="sens-wrap"><div class="sens-fill" style="width:38%"></div></div>
+        <span class="sens-val">$3,845,423 · $3,823,923</span>
+        <span class="sens-roi">178x</span>
+      </div>
+      <div class="sens-row" style="background:rgba(0,212,255,.04);border-radius:4px;padding:8px 4px">
+        <span class="sens-prob">35% <span class="base-pill">BASE</span></span>
+        <div class="sens-wrap"><div class="sens-fill" style="width:54%;background:var(--accent2)"></div></div>
+        <span class="sens-val" style="color:var(--accent2)">$5,383,592 · $5,362,092</span>
+        <span class="sens-roi" style="color:var(--accent2);font-size:14px">249x</span>
+      </div>
+      <div class="sens-row">
+        <span class="sens-prob">50%</span>
+        <div class="sens-wrap"><div class="sens-fill" style="width:77%"></div></div>
+        <span class="sens-val">$7,690,846 · $7,669,346</span>
+        <span class="sens-roi">357x</span>
+      </div>
+      <div class="sens-row">
+        <span class="sens-prob">65%</span>
+        <div class="sens-wrap"><div class="sens-fill" style="width:100%"></div></div>
+        <span class="sens-val">$9,998,099 · $9,976,599</span>
+        <span class="sens-roi">464x</span>
+      </div>
+    </div>
+    <div style="margin-top:1.5rem">
+      <div class="card-title">Key Takeaway — At ANY Attack Probability</div>
+      <p style="color:var(--muted);font-size:12px;line-height:1.7">
+        Even at the most conservative scenario (15% annual attack probability), the $21,500 solution investment
+        delivers <span style="color:var(--accent2);font-weight:600">$2.3M in annual ALE reduction</span> — a
+        <span style="color:var(--accent2);font-weight:600">106x ROI</span>.
+        The four "Not Implemented" controls (CIP-005 Remote Access, CIP-007 Auth, CIP-009 Recovery Plans, CIP-010 VA)
+        account for <span style="color:var(--danger);font-weight:600">$8.2M</span> of residual PML and represent the
+        highest-priority remediation targets.
+      </p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<a class="back-top" href="#">↑ top</a>
+
+<script>
+function sw(id) {
+  document.querySelectorAll('.nav-btn').forEach((b,i) => {
+    const ids = ['overview','crq','roi','register','cip','sens'];
+    b.classList.toggle('active', ids[i] === id);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === id));
+}
+
+const gc = 'rgba(255,255,255,0.06)';
+const lc = '#6b7a91';
+Chart.defaults.color = lc;
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 10;
+
+const fk = v => v >= 1e6 ? '$'+(v/1e6).toFixed(1)+'M' : '$'+(v/1e3).toFixed(0)+'K';
+
+new Chart('c_dist_i', {
+  type:'doughnut',
+  data:{ labels:['High/Critical','Medium-High','Medium-Low','Low'],
+    datasets:[{data:[18,8,3,1], backgroundColor:['#ff4d6d','#ffb84d','#ffd464','#00ff9d'], borderColor:'#0a0e14', borderWidth:3}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}}}}
+});
+
+new Chart('c_dist_r', {
+  type:'doughnut',
+  data:{ labels:['High/Critical','Medium-High','Medium-Low','Low'],
+    datasets:[{data:[11,10,7,2], backgroundColor:['#ff4d6d','#ffb84d','#ffd464','#00ff9d'], borderColor:'#0a0e14', borderWidth:3}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}}}}
+});
+
+new Chart('c_asset_pml', {
+  type:'bar',
+  data:{labels:['Public LTE','Private LTE','DLR Sensors','MCPTT','SEL-651R','OT Network','Remote Access','SCADA/EMS'],
+    datasets:[
+      {label:'PML Without',data:[5931174,4614396,9437265,5745412,11044072,6291615,7872017,1835055],backgroundColor:'#ff4d6d',borderRadius:3},
+      {label:'Residual PML',data:[3543873,1900048,6484034,3729018,6626443,3774969,5808853,1101033],backgroundColor:'#4d9eff',borderRadius:3}
+    ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:lc,maxRotation:35,font:{size:10}},grid:{color:gc}},y:{ticks:{color:lc,callback:v=>fk(v)},grid:{color:gc}}}}
+});
+
+new Chart('c_waterfall',{
+  type:'bar',
+  data:{labels:['Inherent ALE','ALE Reduction','Residual ALE'],
+    datasets:[{data:[14772191,5383592,9388599],backgroundColor:['#ff4d6d','#00ff9d','#4d9eff'],borderRadius:5}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:lc},grid:{display:false}},y:{ticks:{color:lc,callback:v=>fk(v)},grid:{color:gc}}}}
+});
+
+new Chart('c_status_pml',{
+  type:'doughnut',
+  data:{labels:['Implemented (65% mit)','Partial (40% mit)','Not Impl (10% mit)'],
+    datasets:[{data:[6869020,30032530,5304710],backgroundColor:['#00ff9d','#ffb84d','#ff4d6d'],borderColor:'#0a0e14',borderWidth:3}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}}}}
+});
+
+new Chart('c_top15',{
+  type:'bar',
+  data:{
+    labels:['LTE Outage (NI)','DNP3 Manip (P)','Arch Bypass (P)','Remote Access (NI)','Physical Access (P)','Multi-Vector (P)','MCPTT Outage (P)','Auth Bypass (NI)','DoS LTE (P)','DoS SEL (P)','Fieldbus/Serial (NI)','QoS Failure (P)','MCPTT Eavesdrop (P)','SIM Spoof (P)','Firmware (P)'],
+    datasets:[
+      {label:'PML Without',data:[2359356,2097205,2097205,2097205,1966130,1835055,1703979,1703979,1572904,1572904,1310753,1310753,1179678,1441664,1179678],backgroundColor:'#ff4d6d',borderRadius:3},
+      {label:'Residual PML',data:[2123421,1258323,1258323,1887485,1179678,1101033,1022387,1533581,943742,943742,1179677,786452,707807,865000,707807],backgroundColor:'#4d9eff',borderRadius:3}
+    ]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:lc,callback:v=>fk(v)},grid:{color:gc}},y:{ticks:{color:lc,font:{size:10}},grid:{display:false}}}}
+});
+
+new Chart('c_layers',{
+  type:'bar',
+  data:{labels:['Cysurance','RiskQ','Elastio'],
+    datasets:[
+      {label:'Annual Cost',data:[1500,8000,12000],backgroundColor:'rgba(77,158,255,.35)',borderRadius:3},
+      {label:'Value Delivered',data:[7550000,350000,12480137],backgroundColor:['#00ff9d','#4d9eff','#00d4ff'],borderRadius:3}
+    ]},
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:lc,callback:v=>fk(v)},grid:{color:gc}},y:{ticks:{color:lc},grid:{display:false}}}}
+});
+
+new Chart('c_3yr',{
+  type:'line',
+  data:{
+    labels:['Month 0','Month 3','Month 6','Year 1','Year 2','Year 3'],
+    datasets:[
+      {label:'Cumulative Net Benefit',data:[0,1340523,2681046,5362092,10724184,16086276],borderColor:'#00ff9d',backgroundColor:'rgba(0,255,157,0.06)',fill:true,tension:0.4,borderWidth:2,pointBackgroundColor:'#00ff9d',pointRadius:5},
+      {label:'Solution Cost',data:[0,5375,10750,21500,43000,64500],borderColor:'#4d9eff',borderDash:[4,4],borderWidth:1,pointRadius:0,fill:false}
+    ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}}},
+    scales:{x:{ticks:{color:lc},grid:{color:gc}},y:{ticks:{color:lc,callback:v=>fk(v)},grid:{color:gc}}}}
+});
+
+new Chart('c_cip_gap',{
+  type:'bar',
+  data:{
+    labels:['CIP-002','CIP-005','CIP-006','CIP-007','CIP-008','CIP-009','CIP-010','CIP-011','CIP-013'],
+    datasets:[
+      {label:'Implemented',data:[0,0,0,1,0,0,0,0,0],backgroundColor:'#00ff9d',borderRadius:2},
+      {label:'Partial',    data:[1,3,1,4,1,0,2,1,1],backgroundColor:'#ffb84d',borderRadius:2},
+      {label:'Not Impl.', data:[0,1,0,1,0,2,1,0,1],backgroundColor:'#ff4d6d',borderRadius:2}
+    ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}}},
+    scales:{x:{stacked:true,ticks:{color:lc,font:{size:10}},grid:{display:false}},y:{stacked:true,ticks:{color:lc,stepSize:1},grid:{color:gc}}}}
+});
+
+new Chart('c_sens_line',{
+  type:'line',
+  data:{
+    labels:['15%','25%','35%','50%','65%'],
+    datasets:[{label:'ROI Multiple',data:[106,178,249,357,464],borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.08)',fill:true,tension:0.35,borderWidth:2,
+      pointBackgroundColor:['#6b7a91','#6b7a91','#00ff9d','#6b7a91','#6b7a91'],pointRadius:[4,4,8,4,4]}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:lc},grid:{color:gc}},y:{ticks:{color:lc,callback:v=>v+'x'},grid:{color:gc}}}}
+});
+
+const regData = [
+  ["RK-001","Public LTE","Data Interception","CIP-011",3,3,3,"Implemented",0.035],
+  ["RK-002","Public LTE","Unauthorized Access","CIP-005",3,4,3,"Partial",0.040],
+  ["RK-003","Public LTE","Denial of Service","CIP-007",3,4,4,"Partial",0.060],
+  ["RK-004","Private LTE Core","SIM Provisioning","CIP-013",4,2,4,"Implemented",0.045],
+  ["RK-005","Private LTE Core","Insider Threat","CIP-007",4,3,4,"Implemented",0.040],
+  ["RK-006","DLR Sensors","False DLR / SIM Spoof","CIP-010",5,3,5,"Partial",0.055],
+  ["RK-007","DLR Sensors","Rogue BTS / Intercept","CIP-005",5,3,4,"Partial",0.050],
+  ["RK-008","DLR Sensors","LTE Outage Telemetry","CIP-009",5,4,5,"Not Implemented",0.090],
+  ["RK-009","DLR MEC","MEC Compromise","CIP-010",4,2,4,"Implemented",0.035],
+  ["RK-010","DLR MEC","Unauthorized Roaming","CIP-005",4,3,3,"Implemented",0.030],
+  ["RK-011","MCPTT Voice","MCPTT Outage","CIP-009",5,3,5,"Partial",0.065],
+  ["RK-012","MCPTT Voice","Eavesdrop / Impersonation","CIP-005",5,3,4,"Partial",0.045],
+  ["RK-013","MCPTT Voice","QoS Preemption Failure","CIP-007",5,3,4,"Partial",0.050],
+  ["RK-014","Carrier HSS","Supply Chain / SIM Clone","CIP-013",3,2,4,"Partial",0.040],
+  ["RK-015","SEL-651R","Physical Access","CIP-006",5,4,5,"Partial",0.075],
+  ["RK-016","SEL-651R","DNP3 Manipulation","CIP-005",5,4,5,"Partial",0.080],
+  ["RK-017","SEL-651R","Denial of Service","CIP-007",5,3,5,"Partial",0.060],
+  ["RK-018","SEL-651R","Firmware Integrity","CIP-010",5,2,5,"Partial",0.045],
+  ["RK-019","SEL-651R","Fieldbus / Serial Attack","CIP-007",5,3,4,"Not Implemented",0.050],
+  ["RK-020","SEL-651R","Insider / Logic Manip","CIP-007",5,3,5,"Partial",0.060],
+  ["RK-021","Comm Mgmt Server","CMS Compromise","CIP-005",4,3,4,"Partial",0.045],
+  ["RK-022","OT Network","Architecture Bypass","CIP-005",5,4,5,"Partial",0.080],
+  ["RK-023","OT Network","Network Penetration","CIP-005",5,3,4,"Partial",0.060],
+  ["RK-024","Firmware Repo","Supply Chain Tampering","CIP-013",4,2,4,"Partial",0.040],
+  ["RK-025","Time Sync","Time Sync Manipulation","CIP-007",3,2,3,"Partial",0.025],
+  ["RK-026","Remote Access","Remote Access Bypass","CIP-005",5,4,5,"Not Implemented",0.080],
+  ["RK-027","Remote Access","Auth Strength Bypass","CIP-007",5,4,4,"Not Implemented",0.065],
+  ["RK-028","Remote Access","Config Hardening Bypass","CIP-010",4,4,4,"Not Implemented",0.060],
+  ["RK-029","SCADA/EMS","Multi-Vector Exploit","CIP-008",5,2,5,"Partial",0.070],
+  ["RK-030","LTE Modem","LTE Wireless Surface","CIP-007",4,2,4,"Partial",0.035],
+];
+
+const totalPML = 42206260;
+const mitPct = {"Implemented":0.65,"Partial":0.40,"Not Implemented":0.10};
+const ctrlFactor = {"Implemented":0.35,"Partial":0.60,"Not Implemented":0.90};
+const attackProb = 0.35;
+
+const tbody = document.getElementById('register-body');
+regData.forEach(r => {
+  const [id,asset,threat,cip,ac,tl,is_,status,wt] = r;
+  const inh = Math.round((ac*tl*is_)/5);
+  const pml = wt * totalPML;
+  const pmlRes = pml * (1 - mitPct[status]);
+  const aleRed = (pml - pmlRes) * attackProb;
+  const lvl = inh>=15?'High/Critical':inh>=10?'Medium-High':inh>=5?'Medium-Low':'Low';
+  const lvlCls = {'High/Critical':'b-h','Medium-High':'b-mh','Medium-Low':'b-ml','Low':'b-l'}[lvl];
+  const stBadge = {'Implemented':'b-i','Partial':'b-p','Not Implemented':'b-ni'}[status];
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="mono info-t">${id}</td>
+    <td>${asset}</td>
+    <td>${threat}</td>
+    <td class="mono" style="color:var(--accent)">${cip}</td>
+    <td class="mono" style="text-align:center">${ac}</td>
+    <td class="mono" style="text-align:center">${tl}</td>
+    <td class="mono" style="text-align:center">${is_}</td>
+    <td class="mono" style="text-align:center;font-weight:600;color:${inh>=15?'var(--danger)':inh>=10?'var(--warn)':'var(--text)'}">${inh}</td>
+    <td style="text-align:center"><span class="badge ${lvlCls}">${lvl}</span></td>
+    <td><span class="badge ${stBadge}">${status}</span></td>
+    <td class="mono" style="text-align:right;color:var(--danger)">$${Math.round(pml).toLocaleString()}</td>
+    <td class="mono" style="text-align:right;color:var(--accent2)">$${Math.round(aleRed).toLocaleString()}</td>
+  `;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>
